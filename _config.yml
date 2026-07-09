@@ -1,0 +1,4 @@
+title: Tech Notes
+description: Notes and articles on Kubernetes, ArgoCD, and platform engineering
+theme: jekyll-theme-minimal
+markdown: kramdown
