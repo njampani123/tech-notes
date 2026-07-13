@@ -25,3 +25,5 @@ A running collection of notes and articles on Kubernetes, AI assistant infrastru
 
 - [Understanding Skills: How AI Assistants Discover and Load Capabilities](articles/understanding-skills.html) — 1P vs 3P skills, classification tiers, surface targeting, and shared init-time context.
 - [Evaluating Skills: A Methodology for Testing AI-Assistant Skills End-to-End](articles/evaluating-skills.html) — tool-sequence verification, isolated test identities, multi-dimension LLM-judge scoring, surface × model matrix testing, and failure triage at scale.
+- [Building a Claude Plugin, Step by Step](articles/building-a-claude-plugin.html) — how skills, hooks, and tools combine into a plugin, versioning, and the two-tier marketplace delivery model.
+- [Building a Codex Plugin, Step by Step](articles/building-a-codex-plugin.html) — the same building blocks, Codex's three-part app/server/skills bundle, and what changes when porting a plugin across surfaces.
