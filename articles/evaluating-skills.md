@@ -46,6 +46,34 @@ Scoring each dimension independently means a regression in one area (say, safety
 
 Roll the per-run scores up per skill (and per skill version), and use the aggregate as a **release gate** — a skill update that regresses on any dimension should be caught before shipping, not after. When a run fails, the captured input/tool-sequence/output triple from Step 3 is what makes the failure actually debuggable rather than just a red X in a dashboard.
 
+## Step 7: Trace every run for observability
+
+Aggregate pass/fail scores tell you *that* something regressed; they don't tell you *why*, and they're not shareable evidence. Sending every prompt, input, tool-call sequence, and output to a **tracing/observability platform** turns each eval run into an inspectable record rather than a single number. This matters most when a failure isn't the skill's fault at all — if a specific tool is returning malformed or empty results, a trace is exactly what you hand to the team that owns that tool, instead of describing the failure secondhand.
+
+## Auto-classifying failures at scale
+
+Once evals run continuously (on every change, or on a schedule), failures accumulate faster than any human can triage one by one. The first thing worth automating isn't root-causing — it's **sorting failures into buckets** before a human ever looks at them:
+
+- **Authentication error** — the call never reached real logic; the test identity's credentials failed or expired.
+- **API/infra error** — a rate limit, timeout, or 5xx from a backend the tool depends on; often transient, not a real regression.
+- **Tool error** — the tool ran and returned a result, but the result itself is wrong, empty, or malformed.
+- **Quality/judge failure** — everything executed correctly, but the LLM judge scored the output poorly on one of the eval dimensions.
+
+These categories are usually distinguishable from signals already available at the point of failure (status codes, exception types, whether the judge ran at all) — so this classification can be automatic, not manual. Automating it is what makes continuous evaluation sustainable, since it turns "figure out what kind of failure this is" from a per-incident human task into a one-time rule.
+
+## Ownership via a tool registry
+
+When tools are built and owned by different teams, "whose bug is this" becomes its own bottleneck — especially once failures are already sorted into a "tool error" bucket but nobody agrees who should pick it up. A **tool registry** that maps every tool to its owning team turns this from a discussion into a lookup: once a failure is classified as a tool error for a specific tool, the registry says exactly where it routes, and the traced record (Step above) is what gets attached when it's handed off.
+
+## Challenges and how to address them
+
+Running evals continuously, at scale, surfaces problems that don't show up in a one-off test pass:
+
+- **Failure volume outpaces manual review.** Continuous runs across many prompts and skill versions generate more failures than a team can individually inspect. *Address it by deduplicating first* — group failures by a root-cause signature (same tool, same error category, similar context) before a human sees them, so a hundred raw failures might collapse into a handful of distinct underlying issues to actually review.
+- **Not every failure is a real regression.** Transient rate limits, flaky infrastructure, or judge-model scoring noise all produce failures that look like regressions but aren't. *Address it by tracking flakiness per test case over time* — a prompt that fails intermittently across many runs without a code change is a candidate for quarantine/flagging, not repeated manual re-litigation.
+- **Auto-triage rules go stale.** As tools and failure modes change, a fixed classifier will eventually misfile new failure types into the wrong bucket. *Address it by feeding manual review findings back into the classifier* — every failure a human has to manually categorize is a signal that the auto-triage rules are missing a case, and should be closing that gap over time rather than accumulating the same manual work indefinitely.
+- **Ownership boundaries blur when tools interact.** A failure might trace back to how two teams' tools were composed together, not either tool in isolation — the registry can name an owner for a single tool, but not always for an interaction between tools. This case generally still needs a human judgment call, and is worth explicitly tracking as its own (smaller) category rather than forcing it into either team's bucket.
+
 ## Mental model
 
-> Evaluating a skill means testing three layers at once — *did it use the right tools, in the right order* (mechanical correctness), *did it produce a good result* (quality, judged along explicit dimensions), and *can this run unattended, safely, repeatably* (isolated identity, full capture). Skip any one of the three and the eval will pass things that shouldn't ship, or fail in ways nobody can diagnose.
+> Evaluating a skill means testing three layers at once — *did it use the right tools, in the right order* (mechanical correctness), *did it produce a good result* (quality, judged along explicit dimensions), and *can this run unattended, safely, repeatably* (isolated identity, full capture). Running that evaluation *continuously* adds a fourth layer — *can failures be triaged and routed faster than they accumulate* — and that layer is solved with the same instinct as the others: capture everything, classify automatically wherever the signal allows it, and reserve human judgment for the cases that genuinely need it.
