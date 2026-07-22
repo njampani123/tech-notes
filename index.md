@@ -12,6 +12,11 @@ A running collection of notes and articles on Kubernetes, AI assistant infrastru
 - [Kubernetes Controllers, Explained](articles/k8s-controllers.html) — the reconciliation loop pattern, every built-in controller in `kube-controller-manager`, and how custom controllers/Operators extend it.
 - [Taints and Tolerations, Explained](articles/taints-and-tolerations.html) — how nodes repel pods, why tolerations alone don't dedicate a node, and the standard label + taint + toleration + affinity pattern.
 
+## Data Infrastructure
+
+- [Moving Developer-Productivity Analytics from Postgres to ClickHouse (Part 1: Motivation & Architecture)](articles/clickhouse-analytics-architecture.html) — why querying Jira live for developer-productivity metrics doesn't scale, a sharded/replicated ClickHouse-on-Kubernetes cluster backed by S3 storage policies, and the schema/data migration off monthly Jira CSV exports.
+- [Moving Developer-Productivity Analytics from Postgres to ClickHouse (Part 2: Benchmarking, Trino, and Optimization)](articles/clickhouse-benchmarking-trino-optimizations.html) — Locust benchmark methodology, why a Trino federation layer entered the picture and what it cost in latency, and the two config-only optimizations (ClickHouse caching, Trino spooling) that moved the needle most.
+
 ## MCP Gateway
 
 - [MCP Gateway: Authentication Logic](articles/mcp-gateway-auth.html) — how a Model Context Protocol gateway brokers identity across backend services instead of vaulting credentials.
