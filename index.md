@@ -21,6 +21,7 @@ A running collection of notes and articles on Kubernetes, AI assistant infrastru
 
 - [MCP Gateway: Authentication Logic](articles/mcp-gateway-auth.html) — how a Model Context Protocol gateway brokers identity across backend services instead of vaulting credentials.
 - [MCP Gateway: Enterprise Integrations](articles/mcp-gateway-integrations.html) — normalizing issue trackers, wikis, and Git hosts behind a shared tool contract.
+- [MCP Gateway: Federating Multiple MCP Servers Behind One Surface](articles/mcp-gateway-federation.html) — presenting many independently-built MCP servers as one coherent surface: discovery, rename/prefix/describe overrides, collision detection, a shared front-door tool, on-behalf-of token exchange, and the concurrency bug that made a shared HTTP client unsafe.
 
 ## Slackbot & RAG
 

@@ -56,6 +56,8 @@ A gateway integrating N services should ensure one backend's outage doesn't take
 - Each adapter has its own timeout and circuit breaker — a slow Git host shouldn't stall a wiki search.
 - Errors are surfaced per-tool, not as a gateway-wide failure — the assistant should still be able to use the tools that *are* healthy.
 
+This all assumes the backend speaks its own native API and the gateway translates it into MCP. When the backends *already* speak MCP — because several teams each ship their own MCP server — the job shifts from translation to curation; see [MCP Gateway: Federating Multiple MCP Servers](mcp-gateway-federation.html) for that variant.
+
 ## Mental model
 
 > The gateway's value isn't just "one connection instead of many" — it's **translating each backend's idiosyncratic API into a shared, predictable contract**, so growing the number of integrations doesn't grow the complexity the assistant (or the developer building on top of it) has to reason about.
