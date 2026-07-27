@@ -26,6 +26,7 @@ A running collection of notes and articles on Kubernetes, AI assistant infrastru
 ## Slackbot & RAG
 
 - [Lessons from Building a Slackbot for an AI Assistant](articles/building-a-slackbot.html) — ack-fast/work-async architecture, idempotency, threading, and other hard-won lessons.
+- [RAG Retrieval Infrastructure: Chunking, MongoDB as a Vector Store, and Fixing Read Latency](articles/rag-retrieval-mongodb.html) — format-aware chunking, hybrid vector + full-text search on one operational database, diagnosing read contention with a query profiler, fixing it with dedicated search-read capacity, and why search indexes and standard indexes need different drop/rebuild lifecycles.
 
 ## LLMOps
 
