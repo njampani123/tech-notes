@@ -9,6 +9,8 @@ title: "Lessons from Building a Slackbot for an AI Assistant"
 
 Slack is often the first surface teams put an internal AI assistant behind — it's ubiquitous, event-driven, and low-friction compared to standing up a new UI. But Slack's request model imposes constraints that shape the whole architecture, and most of the hard lessons show up only once real users start hammering on it.
 
+![A Slack event flowing through an immediate 200 OK ack, a placeholder message, the real work happening asynchronously, and finally the placeholder being edited in place](../assets/diagrams/building-a-slackbot.png)
+
 ## The core constraint: Slack expects a fast ack
 
 Slack requires your endpoint to acknowledge an event within **3 seconds**, or it treats the request as failed and retries it. An LLM-backed response almost never completes that fast. The resulting pattern is universal:
@@ -23,9 +25,13 @@ Skipping this and doing the work synchronously in the request handler is the sin
 
 Because Slack retries on any timeout or ambiguous failure, your handler **will** receive duplicate events for the same user action. If you don't dedupe by event ID, you'll see the bot occasionally responding twice to one message — confusing and hard to reproduce, because it only shows up when the backend happens to be slow. Track processed event IDs (even a short-TTL cache is enough) and skip repeats.
 
+![The first delivery of an event being processed and replied to, and a Slack retry of the same event ID being recognized as already-seen and skipped rather than replied to again](../assets/diagrams/slack-idempotency.png)
+
 ## Threading is a UX decision, not an implementation detail
 
 Users expect a bot's reply to land in the **same thread** as the message that triggered it, not as a new top-level message in the channel. This means tracking `thread_ts` from the triggering event and always replying into it — including for follow-up turns in a multi-message conversation. Get this wrong and every reply looks like an unrelated new message, and multi-turn context becomes visually incoherent.
+
+![A triggering message's thread_ts correctly producing a reply posted into the same thread, versus a dropped thread_ts producing a reply that posts as an unrelated new top-level message](../assets/diagrams/slack-threading.png)
 
 ## Message size limits force output chunking
 

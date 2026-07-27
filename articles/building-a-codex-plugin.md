@@ -9,6 +9,8 @@ title: "Building a Codex Plugin, Step by Step"
 
 Codex-style coding agents extend through the same conceptual building blocks covered in [Building a Claude Plugin](building-a-claude-plugin.html) — skills, hooks, and tool connectors — but the packaging and installation flow has its own shape. This article focuses on what's different.
 
+![One plugin definition splitting into two surface-specific shapes: Claude's skills + hooks + tools, and Codex's app + server + skills](../assets/diagrams/building-a-codex-plugin.png)
+
 ## The three-part bundle
 
 A Codex plugin, as presented to an installer, is typically described as three explicit components:

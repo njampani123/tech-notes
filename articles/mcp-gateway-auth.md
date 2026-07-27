@@ -9,6 +9,8 @@ title: "MCP Gateway: Authentication Logic"
 
 The [Model Context Protocol (MCP)](https://modelcontextprotocol.io) lets an AI assistant call tools exposed by external servers — a Jira server, a Git host, a wiki. An **MCP gateway** sits in front of many such servers and gives the assistant one connection point instead of dozens. That convenience only works if the gateway also solves authentication cleanly, since every backend service has its own identity model.
 
+![A user session authenticating once with the gateway, the gateway exchanging that for a short-lived scoped token, and only that narrow token being sent on to the backend service](../assets/diagrams/mcp-gateway-auth.png)
+
 ## The core problem
 
 A gateway aggregates tools from N backend services. Each service:
@@ -42,6 +44,8 @@ Knowing *who* the user is isn't enough — the gateway also needs to enforce *wh
 
 The safest default is deny-by-default: a tool is only exposed to a session if that session's identity has been explicitly granted the scope it needs, checked at call time — not just at login time — since permissions can change mid-session.
 
+![A tool call checked against the granted scope at call time: proceeds if granted, denied if not — checked on every call, not just at login](../assets/diagrams/auth-scoping.png)
+
 ## Session and token lifecycle
 
 Because an AI assistant session can be long-lived (a conversation spanning many tool calls over minutes or hours), the gateway typically separates two lifetimes:
@@ -50,6 +54,8 @@ Because an AI assistant session can be long-lived (a conversation spanning many 
 - **Per-backend tokens** — short-lived, re-minted as needed, never outliving the session identity that authorized them.
 
 This means revoking access is a single action (kill the session), not N actions across every backend the session ever touched.
+
+![One long-lived session identity, revocable by killing the session, minting three separate short-lived per-backend tokens](../assets/diagrams/auth-lifecycle.png)
 
 ## Mental model
 

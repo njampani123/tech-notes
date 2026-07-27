@@ -9,6 +9,8 @@ title: "Understanding Skills: How AI Assistants Discover and Load Capabilities"
 
 A **skill** is a packaged capability for an AI assistant — instructions, and often a set of tools, bundled together so the assistant can be taught a new task without retraining the underlying model. As assistants gain the ability to load many skills from many sources, a few architectural questions become unavoidable: who wrote this skill, where is it allowed to run, and what does it need to actually function?
 
+![A 1P skill and a 3P skill both passing through one shared initialization step before reaching the assistant session](../assets/diagrams/understanding-skills.png)
+
 ## First-party vs. third-party skills
 
 Skills generally fall into two trust categories:
@@ -30,9 +32,13 @@ A useful pattern is to classify every skill into a small number of distribution/
 
 This tiering matters because it answers a question a loader has to resolve *before* a skill ever runs: is this skill even allowed to be exposed in this context at all? Declaring the tier as metadata (rather than, say, inspecting what APIs the skill's code happens to call) lets a registry or loader make that decision cheaply and safely, without executing untrusted code first.
 
+![Three stacked tiers: Public for end customers, Internal-tooling for the platform's own developers, and Private for internal staff only](../assets/diagrams/skills-tiers.png)
+
 ## Surface targeting
 
 Most platforms don't ship one assistant experience — they ship several: a chat UI, an IDE plugin, a CLI, maybe a chat-app integration. A skill built for "generate a slide deck" may make no sense inside an IDE plugin; a skill built for "refactor this function" may make no sense in a chat app. Declaring a **target surface** as metadata lets the loader filter which skills even get offered in a given context, instead of exposing every skill everywhere and hoping the assistant ignores the irrelevant ones.
+
+![A skill declaring its target surface, the loader matching it into the chat UI while filtering it out of the IDE plugin](../assets/diagrams/skills-surface-targeting.png)
 
 ## Declaring required capabilities
 

@@ -9,6 +9,8 @@ title: "Moving Developer-Productivity Analytics from Postgres to ClickHouse (Par
 
 [Part 1](clickhouse-analytics-architecture.html) covered why we moved Jira analytics off Postgres and how the ClickHouse-on-Kubernetes-with-S3 cluster got built. This part covers how we actually measured it, an unavoidable architectural question we had to answer along the way — whether to query ClickHouse directly or through an existing SQL federation layer — and the two optimizations that had the largest measurable effect on both latency and cost.
 
+![A client querying ClickHouse directly at roughly 266ms average versus the same client going through a Trino federation layer at roughly 2384ms average](../assets/diagrams/clickhouse-benchmarking-trino-optimizations.png)
+
 ## Benchmark methodology
 
 Load was generated with [Locust](https://locust.io/), driving ClickHouse's native HTTP interface directly (`GET /?query=...`, JSON output format, HTTP basic auth) rather than a client library — the simplest possible path to the query engine, and the one any dashboard backend would actually use. Each simulated user waited a random 0.1–2 seconds between requests, and requests were drawn from a weighted mix intended to look like a real productivity-dashboard workload rather than a synthetic benchmark:
@@ -63,6 +65,8 @@ Part 1 flagged that object storage trades away local-SSD latency for effectively
 
 The problem this uncovered first: with caching off, a single query was issuing **412 S3 requests on average** — even though roughly 90% of the dashboard's queries were identical or near-identical repeats of the same handful of shapes in the table above. Every one of those repeats was re-fetching the same objects from S3 from scratch.
 
+![A query with caching off issuing 412 S3 requests versus the same query with mark, uncompressed, and query caches enabled issuing only 56, hitting S3 only on a cache miss](../assets/diagrams/ch2-cache.png)
+
 Turning on three cache layers — a 10 GB mark cache (index lookups), a 20 GB uncompressed cache (decompressed column data), and a 10 GB query cache (whole-result caching, 1-hour TTL) — cost 40 GB of memory per pod (160 GB across the 4-pod cluster) and changed the picture at 200 concurrent users, sustained for 15 minutes:
 
 | Metric | Without cache | With cache | Improvement |
@@ -81,6 +85,8 @@ Why caching pays off this well specifically here, and might not elsewhere: the w
 ## Optimizing the Trino path: the spooling protocol
 
 Trino's older result-delivery model streams every row of a result set back through the coordinator node, which becomes a bottleneck under concurrency — more simultaneous queries means more result data all funneling through one process. A newer **spooling protocol** changes that: results are written out to external storage instead, and clients fetch them asynchronously, freeing the coordinator to spend its time on query planning rather than result shuttling.
+
+![Results streamed back through the coordinator versus results spooled to external storage and fetched asynchronously by the client](../assets/diagrams/ch2-spooling.png)
 
 Turned on at 100 concurrent users, the throughput and tail-latency numbers moved a lot:
 

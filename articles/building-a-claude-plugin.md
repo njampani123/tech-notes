@@ -9,6 +9,8 @@ title: "Building a Claude Plugin, Step by Step"
 
 A plugin is how an AI coding/chat assistant is extended in a distributable, installable way. Practically, a plugin bundles three things: [skills](understanding-skills.html) (packaged instructions the assistant loads), **hooks** (scripts that run at specific points in a session), and **tools** (connections to external systems). Here's how each piece fits together and how you actually ship one.
 
+![A plugin bundle moving from a source repo through a pre-release channel into the stable channel, ending at end-user install](../assets/diagrams/building-a-claude-plugin.png)
+
 ## The three ingredients
 
 | Ingredient | What it is | Where it lives |
@@ -18,6 +20,8 @@ A plugin is how an AI coding/chat assistant is extended in a distributable, inst
 | **Tools** | Connections to external systems the assistant can call | A separate connector config, typically pointing at a protocol server |
 
 A plugin doesn't have to include all three — a plugin can be skills-only. Hooks and tool connectors are what let a skill actually *do* something beyond generating text.
+
+![Skills, hooks, and tools each feeding into one plugin bundle](../assets/diagrams/plugin-ingredients.png)
 
 ## The plugin manifest
 
@@ -60,6 +64,8 @@ Give every skill — and the plugin/marketplace manifest itself — a strict sem
 - `1.0.0` — first stable release
 - `1.x.0` — backward-compatible additions
 - `2.0.0` — breaking change to behavior or interface
+
+![Version progression from 0.x.x experimental through 1.0.0 first stable, 1.x.0 compatible additions, to 2.0.0 breaking change](../assets/diagrams/plugin-versioning.png)
 
 A prerelease suffix (`-alpha`, `-beta.1`) is a simple way to keep something out of a "stable" distribution channel automatically, without separate manual gating logic — treat the presence of a prerelease tag as a hard signal, not just documentation.
 

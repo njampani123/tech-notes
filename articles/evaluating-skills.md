@@ -9,6 +9,8 @@ title: "Evaluating Skills: A Methodology for Testing AI-Assistant Skills End-to-
 
 Testing a [skill](understanding-skills.html) isn't like testing a normal function — a skill mixes natural-language instructions, tool calls, and often generated content, and "correctness" is frequently a quality judgment rather than an exact match. That calls for an evaluation methodology, not just unit tests.
 
+![A test case running the skill, producing both a tool-sequence grade and an LLM-judge score, which combine into one verdict](../assets/diagrams/evaluating-skills.png)
+
 ## Step 1: Load and wire the skill
 
 Before running any prompts, resolve the skill's definition and connect whatever tool servers it declares as dependencies. Then explicitly verify that the tools the skill calls out are actually **present and loaded into the assistant's context** — not just that the connection succeeded. A misconfigured or unreachable tool server should fail loudly right here, at setup time, rather than surfacing as a confusing mid-conversation failure later in the eval run.
@@ -50,6 +52,8 @@ Roll the per-run scores up per skill (and per skill version), and use the aggreg
 
 A skill doesn't run in one fixed environment. It can be invoked from multiple **surfaces** (a chat UI, an IDE plugin, a CLI, and so on), and within any given surface, potentially by different underlying **models** — a larger, more capable model versus a smaller, faster one. A skill validated once, on one surface with one model, gives no guarantee it behaves the same way everywhere it's actually exposed.
 
+![Three surfaces — chat UI, IDE plugin, CLI — each needing to be tested against both a large model and a small model, forming a full matrix of cells to validate](../assets/diagrams/eval-matrix.png)
+
 This gap is easy to miss because it's invisible at ship time. A skill might reliably call the right tools and produce strong output on a large model, and quietly skip a step or misread an instruction on a smaller model — but nothing in how a skill is packaged or presented to a customer reveals that. Customers reasonably expect a skill to behave **deterministically across whatever model happens to be running underneath a given surface**; they don't see, and shouldn't need to care about, which cell of the matrix it was actually validated on.
 
 Closing that gap is the evals team's job, not something that can be inferred from a single pass:
@@ -72,6 +76,8 @@ Once evals run continuously (on every change, or on a schedule), failures accumu
 - **API/infra error** — a rate limit, timeout, or 5xx from a backend the tool depends on; often transient, not a real regression.
 - **Tool error** — the tool ran and returned a result, but the result itself is wrong, empty, or malformed.
 - **Quality/judge failure** — everything executed correctly, but the LLM judge scored the output poorly on one of the eval dimensions.
+
+![A failure branching into one of four buckets: auth error, API/infra error, tool error, or quality/judge failure](../assets/diagrams/eval-triage.png)
 
 These categories are usually distinguishable from signals already available at the point of failure (status codes, exception types, whether the judge ran at all) — so this classification can be automatic, not manual. Automating it is what makes continuous evaluation sustainable, since it turns "figure out what kind of failure this is" from a per-incident human task into a one-time rule.
 

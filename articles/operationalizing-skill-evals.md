@@ -9,6 +9,8 @@ title: "Operationalizing Skill Evals: CI Pipelines, Shared Fixtures, and Publish
 
 [Evaluating Skills](evaluating-skills.html) covers the *methodology* — tool-sequence grading, LLM-judge dimensions, the surface × model matrix. This is the companion piece: what it actually takes to run that methodology continuously, across every surface a skill ships on, with results that are traceable, storable, and shareable rather than a number that disappears after the run ends.
 
+![A trigger (push, schedule, or manual dispatch) driving a skill x model matrix run, which traces and stores artifacts, generates a report, and publishes it to gh-pages](../assets/diagrams/operationalizing-skill-evals.png)
+
 ## Two surfaces, one grading engine
 
 A skill usually reaches customers through more than one door. A first-party (1P) door is a host application talking to its own backend directly — the harness starts a turn over HTTP, streams tool-invocation and message events back over server-sent events, and the tool names in that stream are already bare. A third-party (3P) door is an external tool integration — the same skill invoked over a protocol like MCP, with an agent SDK driving the actual tool-call loop and prefixing tool names with the connector's identity.
@@ -43,6 +45,8 @@ Each skill's test suite is a flat file — one JSON object per line, one line pe
 
 The images and videos referenced by `input_files` don't live next to the test suite — they live in a separate, shared fixture repository, and the same file gets referenced by relative path from many test cases across many skills and both surfaces. The same portrait shows up in a retouch suite on both the 1P and 3P side; the same product photo shows up in a resize suite, a social-crop suite, and a catalog-generation suite.
 
+![The same input image referenced by three separate test suites — retouch-portrait, resize, and social-crop](../assets/diagrams/ops-shared-fixture.png)
+
 This is deliberate, not incidental reuse. Two things fall out of it:
 
 - **A fixture is never the variable.** When a retouch skill's output looks different on the 1P surface than the 3P surface, it's the same input feeding both runs — so the difference is attributable to the skill/model/surface, not to a subtly different photo someone swapped in for one suite and not the other.
@@ -66,6 +70,8 @@ A pass/fail count tells you *that* something changed; it doesn't tell you *why*,
 The images and videos a skill produces are typically fetched from the backend as presigned URLs — which expire. To keep results reviewable after the fact, every input and output artifact is uploaded at full resolution to a persistent artifact registry (Artifactory) as part of the run, and the registry URL is recorded alongside the result.
 
 The published report doesn't point directly at those originals, though — the registry requires its own authentication, which a browser looking at a public report won't have. Instead, the report generator writes a small JPEG thumbnail next to each result and embeds *that*, wrapped in a "view original" link back to the registry for anyone who has access and wants full resolution. This split — cheap, embeddable thumbnails in the public report; full-resolution originals behind auth in the registry — is what lets the report stay small and shareable without losing the original asset entirely.
+
+![A run's output splitting into a full-resolution original routed to an artifact registry behind auth, and a small thumbnail routed to the public report with a view-original link](../assets/diagrams/ops-storage-split.png)
 
 ## Publishing to GitHub Pages
 
@@ -95,6 +101,8 @@ A single run's verdict only tells you about that run. Catching an actual regress
 - **A hard flip** — verdict went from passing to failing.
 - **Score drift** — a judge metric dropped more than the tolerance allows while the case still nominally passes.
 - **Tool-path drift** — the tool sequence itself changed, even if grading is loose enough that it still technically passes.
+
+![A new run diffed against the committed baseline, branching into a hard flip, a score-drift check against tolerance, or tool-path drift](../assets/diagrams/ops-regression.png)
 
 Treating these as three distinct signals matters because only the first one is unambiguously urgent — the other two are the kind of thing that's cheap to catch early and expensive to notice only after it's compounded across several more changes.
 

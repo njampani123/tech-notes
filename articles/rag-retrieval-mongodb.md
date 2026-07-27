@@ -9,11 +9,15 @@ title: "RAG Retrieval Infrastructure: Chunking, MongoDB as a Vector Store, and F
 
 Most discussion of RAG focuses on the model side — which embedding model, which prompt, which reranker. The retrieval side is its own piece of infrastructure with its own scaling story, and it's the part that quietly determines whether "the assistant found the right passage" actually happens fast enough to matter. This covers three things from building that infrastructure on top of a single operational database used as the vector store: how chunking is actually done in practice, how a read-latency problem got diagnosed and fixed, and how index lifecycle differs for the indexes that make retrieval possible versus the ones that make everything else possible.
 
+![An application sending ordinary reads and writes to a three-node operational replica set, and sending vector plus text search queries to two separate dedicated search nodes](../assets/diagrams/rag-retrieval-mongodb.png)
+
 ## Chunking is format-aware, not one-size-fits-all
 
 The naive version of chunking is "split every document into fixed-size windows." That works poorly the moment content isn't uniform — a wide table doesn't split the same way prose does, a short self-contained record shouldn't be chunked at all, and some sources already know their own natural boundaries better than any generic splitter could guess.
 
 **The default path handles structured text hierarchically, not by raw character count alone.** Given Markdown content, wide tables are split into sub-tables first, so a large table doesn't produce one oversized chunk. Then, if the content has headings, a header-aware splitter divides on those headings first and only falls back to a plain recursive splitter for any section that's still too big — preserving which heading a chunk fell under as metadata, so retrieval results carry their structural context along with the text. Content with no headings at all falls straight to the recursive splitter, using separators that respect code blocks and paragraph boundaries rather than cutting mid-sentence. Chunk size and overlap are both configurable, with a moderate default size and a meaningful overlap so a concept split across a boundary doesn't lose context on either side.
+
+![A Markdown page passing through table-splitting, then header-aware splitting that preserves the heading breadcrumb, then a recursive split for any section still too big](../assets/diagrams/rag-chunking.png)
 
 **Small, self-contained content skips chunking entirely.** A short record that's already a coherent unit (a small support ticket, a single Q&A pair) is stored and embedded as one chunk rather than artificially split. There's also a second, subtler lever here: the text used to *embed* something doesn't have to be identical to the text *stored and shown* to a user — trimming boilerplate (titles, repeated metadata) out of what actually goes to the embedding model measurably improves embedding quality without changing what gets displayed in a result.
 
@@ -22,6 +26,8 @@ The naive version of chunking is "split every document into fixed-size windows."
 ## One database, two workloads: MongoDB as the vector store
 
 Rather than running a dedicated vector database alongside the primary operational store, retrieval here runs on the same MongoDB deployment that holds everything else — collections carry a vector-search index (approximate nearest neighbor, with the stored vectors quantized to shrink their footprint) side by side with a conventional full-text search index on the same content. A query combines both — dense vector similarity and lexical text matching — merged into one ranked result set, with an optional reranking pass on top for the cases where the initial ranking isn't precise enough on its own.
+
+![A query running through vector search and lexical search in parallel, fused into one ranked list via RRF, then reranked before the top-N results go to the LLM](../assets/diagrams/rag-hybrid-rerank.png)
 
 The appeal is real: one database to operate, one connection pool, one backup/restore story, no separate system to keep in sync with the source of truth. The cost is just as real and easy to underestimate until it actually bites: the search/ranking workload and the everyday operational read/write workload are now sharing the same underlying infrastructure, and they have genuinely different resource profiles. Ranking a query against a large vector index is CPU- and memory-hungry in a way that a typical operational read or write simply isn't. Sharing infrastructure between the two doesn't cause a problem — until retrieval volume grows enough that it does.
 

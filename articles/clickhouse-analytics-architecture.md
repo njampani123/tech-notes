@@ -9,6 +9,8 @@ title: "Moving Developer-Productivity Analytics from Postgres to ClickHouse (Par
 
 This is Part 1 of a two-part write-up. This part covers *why* we needed a new analytics store at all and how we deployed and migrated into it. Part 2 covers the benchmarking — what actually got faster, and by how much.
 
+![Years of Jira CSV exports feeding two ClickHouse shards, each with a primary and a replica, all writing to S3 storage](../assets/diagrams/clickhouse-analytics-architecture.png)
+
 ## The problem: measuring developer productivity means querying years of ticket history
 
 A common way an engineering organization tries to understand developer productivity is by mining Jira — cycle time, resolution rate, throughput by team or project, trends over quarters or years. The catch is *where that query runs*. Jira is a live, transactional system serving real-time engineering work — creating tickets, updating status, running workflows. It was never built to also serve as an analytical warehouse.
@@ -18,6 +20,8 @@ Once a productivity dashboard needs to compute rollups across years of history, 
 ## Why not just keep it in Postgres?
 
 The first cut of this historical store was a straightforward relational database (RDS Postgres) — export the ticket history out of Jira, load it into Postgres, and query that instead of hitting Jira directly. This solved the "don't hammer Jira" problem, but not the underlying performance one: a row-oriented transactional database is still the wrong storage layout for "scan years of rows and aggregate by month, by project, by resolution time." As the historical dataset grew — in our case, several years and multiple millions of ticket records — analytical queries (group-by-month rollups, resolution-time percentiles, cross-project comparisons) got slower in exactly the way row-oriented storage predicts: every query still has to touch full rows to read the handful of columns an aggregation actually needs.
+
+![A single aggregation query hitting a row store, which reads every column of every touched row, versus the same query hitting a columnar store, which reads only the columns it needs](../assets/diagrams/ch1-row-vs-columnar.png)
 
 That's the specific gap a **columnar OLAP engine** closes. Reading only the columns a query touches, and being built around scan-and-aggregate access patterns instead of point lookups, is the whole design premise of ClickHouse — so we evaluated it as a drop-in replacement for the *analytics* store, not for Jira itself.
 
@@ -102,6 +106,8 @@ SETTINGS storage_policy = 's3_policy'
 **Sharding by month parity.** Rather than a purely random shard assignment, each monthly file was routed to a shard based on whether its month number was even or odd — a simple, deterministic rule that spread roughly half the rows onto each shard without needing a coordination step at load time. Loading itself ran two files at a time in parallel (one per shard), which roughly halved total load time over loading sequentially.
 
 **A first pass at cross-shard querying.** With data split across two shards, queries need a single logical table to hit. The textbook answer is ClickHouse's `Distributed` table engine, which fans a query out to every shard and merges the results transparently. Our first attempt at wiring that up hit an authentication error between the distributed engine and the per-shard connections — rather than resolving it in place, we shipped a hand-built `UNION ALL` view over `remote()` calls to each shard as an interim fallback. It works, but it's a workaround, not the intended path, and it's the first thread in a larger replication story — covered properly in the next section.
+
+![The Distributed table engine hitting an auth error, falling back to a hand-built UNION ALL view over remote() calls to shard 0 and shard 1](../assets/diagrams/ch1-distributed-workaround.png)
 
 ## What came next
 

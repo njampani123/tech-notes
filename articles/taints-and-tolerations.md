@@ -9,6 +9,8 @@ title: Taints and Tolerations, Explained
 
 These control **which pods can be scheduled on which nodes** — the opposite mechanism from node affinity (which pods *want* a node), taints/tolerations let a node *repel* pods unless they explicitly tolerate it.
 
+![A tainted node repelling Pod A, which has no matching toleration, while scheduling Pod B, which has a matching toleration](../assets/diagrams/taints-and-tolerations.png)
+
 ## The core idea
 
 - **Taint** = applied to a **node**. Says "don't schedule pods here unless they tolerate me."
@@ -28,6 +30,8 @@ kubectl taint nodes node1 dedicated=gpu-team:NoSchedule
 ```
 
 ## The three effects
+
+![A pod without a matching toleration hitting three different taint effects: NoSchedule blocks it outright, PreferNoSchedule avoids it if possible, and NoExecute evicts it if already running](../assets/diagrams/taints-effects.png)
 
 | Effect | Behavior |
 |---|---|
@@ -73,6 +77,8 @@ To truly dedicate a set of nodes to one workload, you need **both halves**:
 | `nodeSelector` / `nodeAffinity` | Pod | **Attracts** your pod to that node (positive selection) |
 
 ### The standard pattern: label + taint + toleration + affinity
+
+![The four-step pattern: label the node, taint it, add a matching toleration on the pod, add affinity so the pod actually goes there — resulting in a node effectively dedicated to that workload](../assets/diagrams/taints-dedicate-node.png)
 
 **1. Label the dedicated nodes:**
 ```

@@ -7,6 +7,8 @@ title: Kubernetes Controllers, Explained
 
 # Kubernetes Controllers, Explained
 
+![The reconciliation loop: desired state, a controller that watches/diffs/acts, and actual state, with the controller observing and closing the gap in a repeating cycle](../assets/diagrams/k8s-controllers.png)
+
 ## The core pattern first
 
 Every controller in Kubernetes follows the same loop, regardless of what it manages:
@@ -18,6 +20,8 @@ watch desired state (spec) → compare to actual state (status) → take action 
 This is the **reconciliation loop** (also called a "control loop"). It's level-triggered, not edge-triggered — controllers don't react to individual events so much as continuously re-check "is reality what the spec says it should be?" That's why Kubernetes is self-healing: kill a pod manually, and within seconds a controller notices the actual count no longer matches the desired count and creates a replacement.
 
 Most built-in controllers run as goroutines inside a single binary: **`kube-controller-manager`**. It's not one controller — it's dozens bundled into one process for operational simplicity.
+
+![kube-controller-manager fanning out into the Deployment controller, the Node controller, the Job controller, and every other built-in controller, each running its own loop](../assets/diagrams/k8s-controllers-manager.png)
 
 ## Built-in controllers, grouped by what they manage
 
@@ -62,6 +66,8 @@ Most built-in controllers run as goroutines inside a single binary: **`kube-cont
 ## Beyond built-in: custom controllers / Operators
 
 Anything with a CRD (Custom Resource Definition) typically ships its own controller reconciling that custom resource — this is the **Operator pattern**. A good example: **ArgoCD's application controller** is exactly this — it reconciles `Application` CRDs against Git + cluster state, using the identical watch → diff → converge loop as every controller above. Same pattern, different domain.
+
+![A custom resource and a custom controller running the identical watch/diff/act loop as every built-in controller, reconciling against the live objects it manages](../assets/diagrams/k8s-controllers-crd.png)
 
 ## Mental model to walk away with
 

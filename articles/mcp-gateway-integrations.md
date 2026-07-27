@@ -9,6 +9,8 @@ title: "MCP Gateway: Enterprise Integrations"
 
 Once an [MCP gateway](mcp-gateway-auth.html) can authenticate a user and broker credentials, the next problem is integrating each backend service — issue trackers like Jira, wikis like Confluence, and source control like Git hosts — behind a **consistent tool interface**, so the assistant doesn't need bespoke logic per service.
 
+![An assistant talking to one gateway with a shared tool contract, which fans out through per-backend adapters to an issue tracker, a wiki, and a Git host](../assets/diagrams/mcp-gateway-integrations.png)
+
 ## Why a common interface matters
 
 Without a gateway, an assistant integrating with three services needs three different mental models: Jira's REST API, a wiki's markup and page-tree structure, Git's object model and hosting-provider-specific APIs (PRs, issues, webhooks). A gateway's job is to **normalize these into a small set of tool shapes** — search, read, create, update, comment — so the assistant reasons about "search the wiki" and "search the issue tracker" the same way, even though the underlying calls are completely different.
@@ -55,6 +57,8 @@ Git integrations tend to need the richest permission model, since actions like o
 A gateway integrating N services should ensure one backend's outage doesn't take down the others. Practical implications:
 - Each adapter has its own timeout and circuit breaker — a slow Git host shouldn't stall a wiki search.
 - Errors are surfaced per-tool, not as a gateway-wide failure — the assistant should still be able to use the tools that *are* healthy.
+
+![The gateway routing to a healthy issue-tracker adapter, a healthy wiki adapter, and a timed-out Git adapter, each with its own breaker so the timeout doesn't affect the others](../assets/diagrams/integrations-isolation.png)
 
 This all assumes the backend speaks its own native API and the gateway translates it into MCP. When the backends *already* speak MCP — because several teams each ship their own MCP server — the job shifts from translation to curation; see [MCP Gateway: Federating Multiple MCP Servers](mcp-gateway-federation.html) for that variant.
 
