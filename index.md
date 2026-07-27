@@ -23,6 +23,10 @@ A running collection of notes and articles on Kubernetes, AI assistant infrastru
 - [MCP Gateway: Enterprise Integrations](articles/mcp-gateway-integrations.html) — normalizing issue trackers, wikis, and Git hosts behind a shared tool contract.
 - [MCP Gateway: Federating Multiple MCP Servers Behind One Surface](articles/mcp-gateway-federation.html) — presenting many independently-built MCP servers as one coherent surface: discovery, rename/prefix/describe overrides, collision detection, a shared front-door tool, on-behalf-of token exchange, and the concurrency bug that made a shared HTTP client unsafe.
 
+## Traffic & Observability
+
+- [Auditing AI API Traffic with Envoy, Lua, and a Go Logging Service](articles/envoy-lua-audit-logging.html) — token-claim-based dynamic routing validated twice (imperative + declarative), synchronous capture paired with an async bounded-queue ingestion service, correlating request/response events via upsert, streaming-response reconstruction, and tiered file/database persistence.
+
 ## Agent Harness Engineering
 
 - [Harness Engineering, Loop Engineering, and the Four Kinds of Agent Memory](articles/harness-loop-agent-memory.html) — building the harness once vs. running the loop per turn, bounding a tool-calling loop, and a decision framework for working/procedural/semantic/episodic memory with the technology each one actually calls for.
